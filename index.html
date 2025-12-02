@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>推推俄罗斯 - 轻松操控版</title>
+    <title>推推俄罗斯 - 巨型特写版 (300px)</title>
     <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -76,7 +76,6 @@
             text-align: center; white-space: nowrap; z-index: 20;
         }
 
-
         #loading-screen {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #0f172a; z-index: 50; display: flex; align-items: center; justify-content: center;
@@ -138,15 +137,16 @@
         </div>
 
         <div class="instruction" onclick="toggleInstruction()">
-            <b>点击圆球</b>开始/停止跟随<br>推方块至虚线框<b>精准重合</b>
+            <b>点击圆球</b>切换跟随/停止<br>推方块至虚线框<b>精准重合</b>
         </div>
     </div>
 </div>
 
 <script>
-    // --- 游戏引擎配置 (放大版) ---
+    // --- 游戏引擎配置 ---
     const LOGICAL_SIZE = 1000; 
-    const ARENA_SIZE = 400;    
+    // 修改：尺寸设为 300，介于200(太拥挤)和460(太小)之间，视觉效果均衡
+    const ARENA_SIZE = 300;    
     const CENTER = LOGICAL_SIZE / 2;
     
     const ENGINE_CONFIG = {
@@ -157,7 +157,6 @@
         winAngle: 0.08, 
     };
 
-    // --- 方块数据库 (保持不变) ---
     const POLYOMINO_SETS = {
         '1': { 'Mono': { color: '#94a3b8', symmetry: Math.PI / 2, blocks: [{x:0, y:0}] } },
         '2': { 'Domino': { color: '#60a5fa', symmetry: Math.PI, blocks: [{x:-0.5, y:0}, {x:0.5, y:0}] } },
@@ -203,13 +202,12 @@
     let Engine, Render, Runner, Bodies, Body, Composite, Events, Vector;
     let engine, render, runner;
     let playerBody, activeTetrominoBody = null, targetZone = null;
-    let isFollowing = false; // 状态变量：是否正在跟随
+    let isFollowing = false;
     let screenMouse = { x: 0, y: 0 };
     let worldMouse = { x: 0, y: 0 };
     let startTime = Date.now(), isWinning = false;
     let currentDifficulty = '4';
 
-    // --- 历史记录系统 ---
     let levelHistory = [];
     let currentHistoryIndex = -1;
 
@@ -308,7 +306,8 @@
     }
 
     function generateAndLoadNewLevel() {
-        const spawnMargin = 120; 
+        // 修改：竞技场大小 300，调整边距为 80 (半径范围 = 150 - 80 = 70)
+        const spawnMargin = 80; 
         const range = ARENA_SIZE / 2 - spawnMargin;
 
         const playerX = CENTER + (Math.random() - 0.5) * 2 * range;
@@ -324,7 +323,8 @@
         const targetAngle = (Math.floor(Math.random() * 4) * 90) * (Math.PI / 180);
 
         let startX, startY, isSafe = false, attempts = 0;
-        const safeDistThreshold = 100;
+        // 修改：安全距离 70
+        const safeDistThreshold = 70;
         
         while (!isSafe && attempts < 50) {
             startX = CENTER + (Math.random() - 0.5) * 2 * range;
@@ -353,7 +353,6 @@
 
     function loadLevelFromState(state) {
         isWinning = false;
-        // 切换关卡时，重置跟随状态
         isFollowing = false;
         
         document.getElementById('win-message').style.opacity = 0;
@@ -428,18 +427,24 @@
         Composite.add(engine.world, walls);
     }
 
-    // --- 新的输入处理逻辑 (点击切换模式) ---
+    // --- 统一的输入处理逻辑 ---
     function setupInputs(canvas) {
         const handleMove = (e) => {
             const rect = canvas.getBoundingClientRect();
             let clientX, clientY;
-            if (e.touches && e.touches.length > 0) {
-                clientX = e.touches[0].clientX;
-                clientY = e.touches[0].clientY;
+            
+            if (e.type.startsWith('touch')) {
+                 if (e.touches && e.touches.length > 0) {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                 } else {
+                    return; 
+                 }
             } else {
                 clientX = e.clientX;
                 clientY = e.clientY;
             }
+            
             const x = clientX - rect.left;
             const y = clientY - rect.top;
             screenMouse.x = x;
@@ -448,23 +453,20 @@
         };
 
         const handleToggle = (e) => {
-            e.preventDefault(); // 阻止默认行为 (如滚动、双击缩放)
-            handleMove(e); // 先更新一下位置
+            e.preventDefault(); 
+            handleMove(e); 
             
             if (playerBody) {
                 const dist = Vector.magnitude(Vector.sub(worldMouse, playerBody.position));
-                // 判定半径设为 50px，比球体实际半径大，方便点击
-                if (dist < 50) {
+                if (dist < 60) {
                     isFollowing = !isFollowing;
                 }
             }
         };
 
-        // 点击/触摸事件用于切换状态
         canvas.addEventListener('mousedown', handleToggle);
         canvas.addEventListener('touchstart', handleToggle, {passive: false});
         
-        // 移动事件仅更新坐标
         window.addEventListener('mousemove', handleMove);
         canvas.addEventListener('touchmove', (e) => { e.preventDefault(); handleMove(e); }, {passive: false});
     }
@@ -484,7 +486,6 @@
     function setupEvents() {
         Events.on(engine, 'beforeUpdate', function() {
             engine.world.gravity.scale = 0;
-            // 只有在 isFollowing 为 true 时才施加力
             if (isFollowing && playerBody) {
                 const forceVector = Vector.sub(worldMouse, playerBody.position);
                 const forceMagnitude = Vector.magnitude(forceVector);
@@ -526,11 +527,10 @@
     function renderOverlay(ctx) {
         if (!targetZone) return;
 
-        // 绘制高亮效果 (反馈状态)
         if (isFollowing) {
             ctx.beginPath();
             ctx.arc(playerBody.position.x, playerBody.position.y, ENGINE_CONFIG.playerSize + 5, 0, 2 * Math.PI);
-            ctx.strokeStyle = '#fbbf24'; // 黄色光圈
+            ctx.strokeStyle = '#fbbf24'; 
             ctx.lineWidth = 2;
             ctx.stroke();
         }
@@ -558,12 +558,11 @@
         });
         ctx.restore();
         
-        // 绘制拖拽线 (仅在跟随模式下显示)
         if (isFollowing) {
             ctx.beginPath();
             ctx.moveTo(playerBody.position.x, playerBody.position.y);
             ctx.lineTo(worldMouse.x, worldMouse.y);
-            ctx.strokeStyle = '#fbbf24'; // 显眼的黄色连线
+            ctx.strokeStyle = '#fbbf24'; 
             ctx.lineWidth = 1.5;
             ctx.setLineDash([]);
             ctx.stroke();
@@ -624,7 +623,6 @@
 
     function victory() {
         isWinning = true;
-        // 胜利时也要关闭跟随，防止误操作
         isFollowing = false;
         
         document.getElementById('win-message').style.opacity = 1;
