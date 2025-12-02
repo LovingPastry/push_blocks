@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>推推俄罗斯 - 双重置版</title>
+    <title>推推俄罗斯 - 历史记录版</title>
     <script src="https://cdn.jsdelivr.net/npm/matter-js@0.19.0/build/matter.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -12,21 +12,22 @@
         
         #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; box-sizing: border-box; z-index: 10; }
         
-        .top-bar { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; }
+        .top-bar { display: flex; justify-content: space-between; align-items: flex-start; width: 100%; flex-wrap: wrap; gap: 10px; }
         
         .score-board { color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         .level-text { font-size: 28px; font-weight: bold; color: #fbbf24; }
         .time-text { font-size: 16px; color: #9ca3af; }
         .debug-text { font-size: 12px; color: #4b5563; margin-top: 5px;}
-        .accuracy-bar { width: 200px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-top: 10px; overflow: hidden; display: none; }
+        .accuracy-bar { width: 160px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; margin-top: 10px; overflow: hidden; display: none; }
         .accuracy-fill { height: 100%; background: #22c55e; width: 0%; transition: width 0.1s; }
 
-        .btn-group { display: flex; gap: 10px; }
+        .controls-area { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; pointer-events: auto; }
+
+        .btn-group { display: flex; gap: 8px; }
 
         .game-btn {
-            pointer-events: auto;
             border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 8px 12px;
+            padding: 6px 12px;
             border-radius: 8px;
             font-weight: bold;
             cursor: pointer;
@@ -34,17 +35,40 @@
             transition: all 0.2s;
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 14px;
+            gap: 4px;
+            font-size: 13px;
             color: white;
+            white-space: nowrap;
         }
         .game-btn:active { transform: scale(0.95); }
+        .game-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        
+        .btn-prev { background: rgba(100, 116, 139, 0.2); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.5); }
+        .btn-prev:hover:not(:disabled) { background: rgba(100, 116, 139, 0.8); color: white; }
 
         .btn-retry { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border-color: rgba(239, 68, 68, 0.5); }
-        .btn-retry:hover { background: rgba(239, 68, 68, 0.8); color: white; }
+        .btn-retry:hover:not(:disabled) { background: rgba(239, 68, 68, 0.8); color: white; }
 
         .btn-skip { background: rgba(59, 130, 246, 0.2); color: #93c5fd; border-color: rgba(59, 130, 246, 0.5); }
-        .btn-skip:hover { background: rgba(59, 130, 246, 0.8); color: white; }
+        .btn-skip:hover:not(:disabled) { background: rgba(59, 130, 246, 0.8); color: white; }
+
+        .difficulty-select {
+            appearance: none;
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.5);
+            color: #e2e8f0;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            outline: none;
+            text-align: right;
+            backdrop-filter: blur(4px);
+        }
+        .difficulty-select:hover { border-color: #fbbf24; }
+        .difficulty-wrapper { position: relative; display: flex; align-items: center; gap: 5px; }
+        .difficulty-label { color: #94a3b8; font-size: 12px; font-weight: bold; text-transform: uppercase; }
 
         .instruction { color: rgba(255,255,255,0.7); text-align: center; font-size: 16px; margin-bottom: 20px; background: rgba(0,0,0,0.3); padding: 10px 20px; border-radius: 999px; align-self: center; pointer-events: auto; cursor: pointer; backdrop-filter: blur(2px);}
         
@@ -77,32 +101,52 @@
     <div id="ui-layer">
         <div class="top-bar">
             <div class="score-board">
-                <div class="level-text">Level <span id="level-display">1</span></div>
+                <div class="level-text">Stage <span id="level-display">1</span></div>
                 <div class="time-text">Time: <span id="timer-display">0.0</span>s</div>
                 <div class="debug-text">Req: >95% Overlap</div>
                 <div class="accuracy-bar" id="acc-bar"><div class="accuracy-fill" id="acc-fill"></div></div>
             </div>
             
-            <div class="btn-group">
-                <!-- 重置按钮：恢复当前关卡初始状态 -->
-                <button onclick="retryCurrentLevel()" class="game-btn btn-retry">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    重置
-                </button>
-                <!-- 跳过按钮：生成新关卡 -->
-                <button onclick="startNewLevel()" class="game-btn btn-skip">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                    </svg>
-                    跳过
-                </button>
+            <div class="controls-area">
+                <div class="difficulty-wrapper">
+                    <span class="difficulty-label">方块规模</span>
+                    <select id="difficulty-select" class="difficulty-select" onchange="onDifficultyChange()">
+                        <option value="1">1 (单格)</option>
+                        <option value="2">2 (多米诺)</option>
+                        <option value="3">3 (三格)</option>
+                        <option value="4" selected>4 (经典)</option>
+                        <option value="5">5 (五格)</option>
+                    </select>
+                </div>
+
+                <div class="btn-group">
+                    <!-- 上一关 -->
+                    <button onclick="goToPreviousLevel()" class="game-btn btn-prev" id="btn-prev" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                        </svg>
+                        上一关
+                    </button>
+                    <!-- 重置 -->
+                    <button onclick="retryCurrentLevel()" class="game-btn btn-retry">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        重置
+                    </button>
+                    <!-- 下一关 -->
+                    <button onclick="goToNextLevel()" class="game-btn btn-skip">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                        下一关
+                    </button>
+                </div>
             </div>
         </div>
 
         <div class="instruction" onclick="toggleInstruction()">
-            要求：必须将方块与虚线框<br><b>精准重合 (95%+)</b> 才能吸附
+            推方块入框<br>需<b>精准重合</b>
         </div>
     </div>
 </div>
@@ -115,30 +159,53 @@
     
     const ENGINE_CONFIG = {
         wallThickness: 100,
-        playerSize: 25, 
+        playerSize: 17.5, 
         blockSize: 35, 
         winDistance: 5.0, 
         winAngle: 0.08, 
     };
 
-    const TETROMINOS = {
-        'I': { color: '#22d3ee', symmetry: Math.PI, blocks: [{x:-1.5, y:0}, {x:-0.5, y:0}, {x:0.5, y:0}, {x:1.5, y:0}] },
-        'J': { color: '#3b82f6', symmetry: Math.PI * 2, blocks: [{x:-1, y:-0.5}, {x:0, y:-0.5}, {x:1, y:-0.5}, {x:1, y:0.5}] },
-        'L': { color: '#f59e0b', symmetry: Math.PI * 2, blocks: [{x:-1, y:0.5}, {x:-1, y:-0.5}, {x:0, y:-0.5}, {x:1, y:-0.5}] },
-        'O': { color: '#eab308', symmetry: Math.PI / 2, blocks: [{x:-0.5, y:-0.5}, {x:0.5, y:-0.5}, {x:-0.5, y:0.5}, {x:0.5, y:0.5}] },
-        'S': { color: '#22c55e', symmetry: Math.PI, blocks: [{x:-0.5, y:0.5}, {x:0.5, y:0.5}, {x:0.5, y:-0.5}, {x:1.5, y:-0.5}] },
-        'T': { color: '#a855f7', symmetry: Math.PI * 2, blocks: [{x:-0.5, y:-0.5}, {x:0.5, y:-0.5}, {x:1.5, y:-0.5}, {x:0.5, y:0.5}] },
-        'Z': { color: '#ef4444', symmetry: Math.PI, blocks: [{x:-1.5, y:-0.5}, {x:-0.5, y:-0.5}, {x:-0.5, y:0.5}, {x:0.5, y:0.5}] }
+    // --- 方块数据库 ---
+    const POLYOMINO_SETS = {
+        '1': { 'Mono': { color: '#94a3b8', symmetry: Math.PI / 2, blocks: [{x:0, y:0}] } },
+        '2': { 'Domino': { color: '#60a5fa', symmetry: Math.PI, blocks: [{x:-0.5, y:0}, {x:0.5, y:0}] } },
+        '3': {
+            'I3': { color: '#22d3ee', symmetry: Math.PI, blocks: [{x:-1, y:0}, {x:0, y:0}, {x:1, y:0}] },
+            'L3': { color: '#facc15', symmetry: Math.PI * 2, blocks: [{x:-0.5, y:-0.5}, {x:0.5, y:-0.5}, {x:-0.5, y:0.5}] }
+        },
+        '4': {
+            'I': { color: '#22d3ee', symmetry: Math.PI, blocks: [{x:-1.5, y:0}, {x:-0.5, y:0}, {x:0.5, y:0}, {x:1.5, y:0}] },
+            'J': { color: '#3b82f6', symmetry: Math.PI * 2, blocks: [{x:-1, y:-0.5}, {x:0, y:-0.5}, {x:1, y:-0.5}, {x:1, y:0.5}] },
+            'L': { color: '#f59e0b', symmetry: Math.PI * 2, blocks: [{x:-1, y:0.5}, {x:-1, y:-0.5}, {x:0, y:-0.5}, {x:1, y:-0.5}] },
+            'O': { color: '#eab308', symmetry: Math.PI / 2, blocks: [{x:-0.5, y:-0.5}, {x:0.5, y:-0.5}, {x:-0.5, y:0.5}, {x:0.5, y:0.5}] },
+            'S': { color: '#22c55e', symmetry: Math.PI, blocks: [{x:-0.5, y:0.5}, {x:0.5, y:0.5}, {x:0.5, y:-0.5}, {x:1.5, y:-0.5}] },
+            'T': { color: '#a855f7', symmetry: Math.PI * 2, blocks: [{x:-0.5, y:-0.5}, {x:0.5, y:-0.5}, {x:1.5, y:-0.5}, {x:0.5, y:0.5}] },
+            'Z': { color: '#ef4444', symmetry: Math.PI, blocks: [{x:-1.5, y:-0.5}, {x:-0.5, y:-0.5}, {x:-0.5, y:0.5}, {x:0.5, y:0.5}] }
+        },
+        '5': {
+            'I5': { color: '#06b6d4', symmetry: Math.PI, blocks: [{x:-2,y:0}, {x:-1,y:0}, {x:0,y:0}, {x:1,y:0}, {x:2,y:0}] },
+            'L5': { color: '#f59e0b', symmetry: Math.PI * 2, blocks: [{x:-1.5,y:0.5}, {x:-0.5,y:0.5}, {x:0.5,y:0.5}, {x:1.5,y:0.5}, {x:-1.5,y:-0.5}] },
+            'P': { color: '#ec4899', symmetry: Math.PI * 2, blocks: [{x:-0.5,y:-1}, {x:-0.5,y:0}, {x:-0.5,y:1}, {x:0.5,y:0}, {x:0.5,y:1}] },
+            'T5': { color: '#a855f7', symmetry: Math.PI * 2, blocks: [{x:-1,y:-0.5}, {x:0,y:-0.5}, {x:1,y:-0.5}, {x:0,y:0.5}, {x:0,y:1.5}] },
+            'U': { color: '#84cc16', symmetry: Math.PI * 2, blocks: [{x:-1,y:-1}, {x:-1,y:0.5}, {x:0,y:0.5}, {x:1,y:0.5}, {x:1,y:-1}] },
+            'V': { color: '#ef4444', symmetry: Math.PI * 2, blocks: [{x:-1,y:-1}, {x:-1,y:0}, {x:-1,y:1}, {x:0,y:1}, {x:1,y:1}] },
+            'W': { color: '#14b8a6', symmetry: Math.PI * 2, blocks: [{x:-1,y:-1}, {x:-1,y:0}, {x:0,y:0}, {x:0,y:1}, {x:1,y:1}] },
+            'X': { color: '#6366f1', symmetry: Math.PI / 2, blocks: [{x:0,y:0}, {x:-1,y:0}, {x:1,y:0}, {x:0,y:-1}, {x:0,y:1}] },
+            'Y': { color: '#eab308', symmetry: Math.PI * 2, blocks: [{x:-1.5,y:0}, {x:-0.5,y:0}, {x:0.5,y:0}, {x:1.5,y:0}, {x:0.5,y:-1}] },
+            'Z5': { color: '#f97316', symmetry: Math.PI, blocks: [{x:-1,y:-1}, {x:0,y:-1}, {x:0,y:0}, {x:0,y:1}, {x:1,y:1}] },
+            'F': { color: '#8b5cf6', symmetry: Math.PI * 2, blocks: [{x:0,y:-1}, {x:0,y:0}, {x:-1,y:0}, {x:0,y:1}, {x:1,y:-1}] },
+            'N': { color: '#3b82f6', symmetry: Math.PI, blocks: [{x:-1.5,y:0.5}, {x:-0.5,y:0.5}, {x:-0.5,y:-0.5}, {x:0.5,y:-0.5}, {x:1.5,y:-0.5}] }
+        }
     };
 
-    Object.keys(TETROMINOS).forEach(key => {
-        const blocks = TETROMINOS[key].blocks;
-        let sumX = 0, sumY = 0;
-        blocks.forEach(b => { sumX += b.x; sumY += b.y; });
-        TETROMINOS[key].offset = {
-            x: sumX / blocks.length,
-            y: sumY / blocks.length
-        };
+    Object.keys(POLYOMINO_SETS).forEach(n => {
+        const set = POLYOMINO_SETS[n];
+        Object.keys(set).forEach(key => {
+            const blocks = set[key].blocks;
+            let sumX = 0, sumY = 0;
+            blocks.forEach(b => { sumX += b.x; sumY += b.y; });
+            set[key].offset = { x: sumX / blocks.length, y: sumY / blocks.length };
+        });
     });
 
     let Engine, Render, Runner, Bodies, Body, Composite, Events, Vector;
@@ -147,20 +214,16 @@
     let isDragging = false;
     let screenMouse = { x: 0, y: 0 };
     let worldMouse = { x: 0, y: 0 };
-    let level = 1, startTime = Date.now(), isWinning = false;
-    
-    // --- 新增：保存当前关卡的初始状态 ---
-    let currentLevelState = {
-        playerStart: { x: 0, y: 0 },
-        blockStart: { x: 0, y: 0 },
-        blockType: 'I',
-        // targetZone 是全局的，不需要额外存，除非我们想支持撤销
-    };
+    let startTime = Date.now(), isWinning = false;
+    let currentDifficulty = '4';
+
+    // --- 历史记录系统 ---
+    let levelHistory = []; // 存储所有生成的关卡配置
+    let currentHistoryIndex = -1; // 当前处于历史记录的哪个位置
 
     function checkResourcesAndInit() {
         if (typeof Matter === 'undefined') {
             document.getElementById('loading-text').innerText = "加载失败: 无法连接 CDN。\n请尝试刷新或检查网络。";
-            document.getElementById('loading-text').style.color = "#ef4444";
             return;
         }
         Engine = Matter.Engine;
@@ -177,7 +240,6 @@
     function initGame() {
         const container = document.getElementById('game-container');
         const loadingScreen = document.getElementById('loading-screen');
-        
         if (container.clientWidth === 0) { setTimeout(initGame, 100); return; }
         loadingScreen.style.opacity = 0;
         setTimeout(() => loadingScreen.style.display = 'none', 500);
@@ -214,10 +276,143 @@
         Runner.run(Runner.create(), engine);
         Render.run(render);
 
-        startNewLevel(); // 首次启动
+        // 初始化难度并开始
+        onDifficultyChange(true); 
         window.addEventListener('resize', updateViewport);
         updateViewport();
     }
+
+    function onDifficultyChange(isInit = false) {
+        const select = document.getElementById('difficulty-select');
+        currentDifficulty = select.value;
+        // 切换难度时，清空历史，重新开始
+        if (!isInit) {
+            levelHistory = [];
+            currentHistoryIndex = -1;
+            goToNextLevel();
+        } else {
+            // 初始化直接生成第一关
+            goToNextLevel(); 
+        }
+    }
+
+    // --- 关卡流控制 ---
+
+    // 1. 上一关
+    function goToPreviousLevel() {
+        if (currentHistoryIndex > 0) {
+            currentHistoryIndex--;
+            loadLevelFromState(levelHistory[currentHistoryIndex]);
+        }
+    }
+
+    // 2. 下一关 (如果已在最新关则生成新关，否则从历史加载)
+    function goToNextLevel() {
+        if (currentHistoryIndex < levelHistory.length - 1) {
+            // 仅仅是往后翻页，读取历史
+            currentHistoryIndex++;
+            loadLevelFromState(levelHistory[currentHistoryIndex]);
+        } else {
+            // 确实是新的一关，生成并保存
+            generateAndLoadNewLevel();
+        }
+    }
+
+    // 3. 重置当前关卡 (从历史记录重新加载当前状态)
+    function retryCurrentLevel() {
+        if (currentHistoryIndex >= 0 && currentHistoryIndex < levelHistory.length) {
+            loadLevelFromState(levelHistory[currentHistoryIndex]);
+        }
+    }
+
+    // 辅助：生成新关卡数据并入栈
+    function generateAndLoadNewLevel() {
+        const spawnMargin = 150; 
+        const range = ARENA_SIZE / 2 - spawnMargin;
+
+        const playerX = CENTER + (Math.random() - 0.5) * 2 * range;
+        const playerY = CENTER + (Math.random() - 0.5) * 2 * range;
+
+        const diff = currentDifficulty; 
+        const currentSet = POLYOMINO_SETS[diff];
+        const keys = Object.keys(currentSet);
+        const type = keys[Math.floor(Math.random() * keys.length)];
+
+        const targetX = CENTER + (Math.random() - 0.5) * 2 * range;
+        const targetY = CENTER + (Math.random() - 0.5) * 2 * range; 
+        const targetAngle = (Math.floor(Math.random() * 4) * 90) * (Math.PI / 180);
+
+        let startX, startY, isSafe = false, attempts = 0;
+        while (!isSafe && attempts < 50) {
+            startX = CENTER + (Math.random() - 0.5) * 2 * range;
+            startY = CENTER + (Math.random() - 0.5) * 2 * range;
+            const distP = Math.hypot(startX - playerX, startY - playerY);
+            const distT = Math.hypot(startX - targetX, startY - targetY);
+            if (distP > 160 && distT > 160) isSafe = true; 
+            attempts++;
+        }
+        
+        const initialAngle = Math.random() * Math.PI * 2;
+
+        // 构建状态对象
+        const newState = {
+            playerStart: { x: playerX, y: playerY },
+            blockStart: { x: startX, y: startY },
+            blockType: type,
+            blockSet: diff,
+            blockInitialAngle: initialAngle,
+            targetZone: { x: targetX, y: targetY, angle: targetAngle, type: type, diff: diff }
+        };
+
+        // 入栈
+        levelHistory.push(newState);
+        currentHistoryIndex++;
+
+        // 加载
+        loadLevelFromState(newState);
+    }
+
+    // 辅助：根据状态加载关卡 (物理实体生成)
+    function loadLevelFromState(state) {
+        // UI 更新
+        isWinning = false;
+        document.getElementById('win-message').style.opacity = 0;
+        document.getElementById('acc-bar').style.display = 'block'; 
+        // 显示当前是第几关 (Index + 1)
+        document.getElementById('level-display').innerText = currentHistoryIndex + 1;
+        
+        // 控制按钮状态
+        const btnPrev = document.getElementById('btn-prev');
+        if (btnPrev) {
+            btnPrev.disabled = (currentHistoryIndex <= 0);
+        }
+
+        // 物理清理
+        Composite.allBodies(engine.world).forEach(b => {
+            if (b.label === 'Tetromino') Composite.remove(engine.world, b);
+        });
+
+        // 恢复数据
+        targetZone = state.targetZone;
+
+        // 恢复实体
+        Body.setPosition(playerBody, state.playerStart);
+        Body.setVelocity(playerBody, { x: 0, y: 0 });
+        Body.setAngularVelocity(playerBody, 0);
+
+        activeTetrominoBody = createPolyomino(
+            state.blockStart.x, 
+            state.blockStart.y, 
+            state.blockSet, 
+            state.blockType
+        );
+        Body.setAngle(activeTetrominoBody, state.blockInitialAngle);
+        Composite.add(engine.world, activeTetrominoBody);
+        
+        startTime = Date.now();
+    }
+
+    // --- 物理与渲染逻辑 --- (保持不变)
 
     function updateViewport() {
         const container = document.getElementById('game-container');
@@ -360,8 +555,8 @@
         ctx.lineWidth = 2; 
         ctx.setLineDash([8, 6]); 
         
-        const type = targetZone.type;
-        const config = TETROMINOS[type];
+        const set = POLYOMINO_SETS[targetZone.diff];
+        const config = set[targetZone.type];
         const blocks = config.blocks;
         const offset = config.offset; 
         const size = ENGINE_CONFIG.blockSize; 
@@ -386,8 +581,8 @@
         }
     }
 
-    function createPolyomino(x, y, type) {
-        const config = TETROMINOS[type];
+    function createPolyomino(x, y, diff, type) {
+        const config = POLYOMINO_SETS[diff][type];
         const parts = [];
         config.blocks.forEach(b => {
             parts.push(Bodies.rectangle(
@@ -407,97 +602,6 @@
         });
     }
 
-    // --- 重置功能 (Retry) ---
-    function retryCurrentLevel() {
-        // 恢复 UI 状态
-        isWinning = false;
-        document.getElementById('win-message').style.opacity = 0;
-        document.getElementById('acc-bar').style.display = 'block';
-        
-        // 1. 清理当前方块
-        Composite.allBodies(engine.world).forEach(b => {
-            if (b.label === 'Tetromino') Composite.remove(engine.world, b);
-        });
-
-        // 2. 还原玩家位置
-        Body.setPosition(playerBody, currentLevelState.playerStart);
-        Body.setVelocity(playerBody, { x: 0, y: 0 });
-        Body.setAngularVelocity(playerBody, 0);
-
-        // 3. 还原方块位置 (生成一个新的，但在原位置)
-        activeTetrominoBody = createPolyomino(currentLevelState.blockStart.x, currentLevelState.blockStart.y, currentLevelState.blockType);
-        // 重要：角度随机是在 startNewLevel 定的，如果要完全重置，也应该保存初始角度。
-        // 这里为了简单，重置时方块角度会再次随机旋转（增加一点点变数），
-        // 如果想要“完全一样”，需要在 state 里存 angle。让我们把它做得更完美一点：
-        // 修改：使用保存的初始角度。
-        Body.setAngle(activeTetrominoBody, currentLevelState.blockInitialAngle);
-        
-        Composite.add(engine.world, activeTetrominoBody);
-        
-        // 重置时间
-        startTime = Date.now();
-    }
-
-    // --- 新关卡功能 (Skip/Next) ---
-    function startNewLevel() {
-        isWinning = false;
-        document.getElementById('win-message').style.opacity = 0;
-        document.getElementById('acc-bar').style.display = 'block'; 
-        document.getElementById('level-display').innerText = level;
-
-        Composite.allBodies(engine.world).forEach(b => {
-            if (b.label === 'Tetromino') Composite.remove(engine.world, b);
-        });
-
-        const spawnMargin = 150; 
-        const range = ARENA_SIZE / 2 - spawnMargin;
-
-        // 1. 生成随机位置
-        const playerX = CENTER + (Math.random() - 0.5) * 2 * range;
-        const playerY = CENTER + (Math.random() - 0.5) * 2 * range;
-
-        // 2. 生成目标
-        const keys = Object.keys(TETROMINOS);
-        const type = keys[Math.floor(Math.random() * keys.length)];
-        const targetX = CENTER + (Math.random() - 0.5) * 2 * range;
-        const targetY = CENTER + (Math.random() - 0.5) * 2 * range; 
-        const targetAngle = (Math.floor(Math.random() * 4) * 90) * (Math.PI / 180);
-
-        targetZone = { x: targetX, y: targetY, angle: targetAngle, type: type };
-
-        // 3. 生成方块起始位置
-        let startX, startY, isSafe = false, attempts = 0;
-        while (!isSafe && attempts < 50) {
-            startX = CENTER + (Math.random() - 0.5) * 2 * range;
-            startY = CENTER + (Math.random() - 0.5) * 2 * range;
-            const distP = Math.hypot(startX - playerX, startY - playerY);
-            const distT = Math.hypot(startX - targetX, startY - targetY);
-            if (distP > 150 && distT > 150) isSafe = true;
-            attempts++;
-        }
-        
-        const initialAngle = Math.random() * Math.PI * 2;
-
-        // --- 存档 (Save State) ---
-        currentLevelState = {
-            playerStart: { x: playerX, y: playerY },
-            blockStart: { x: startX, y: startY },
-            blockType: type,
-            blockInitialAngle: initialAngle
-        };
-
-        // 应用位置
-        Body.setPosition(playerBody, { x: playerX, y: playerY });
-        Body.setVelocity(playerBody, { x: 0, y: 0 });
-        Body.setAngularVelocity(playerBody, 0);
-
-        activeTetrominoBody = createPolyomino(startX, startY, type);
-        Body.setAngle(activeTetrominoBody, initialAngle);
-        Composite.add(engine.world, activeTetrominoBody);
-        
-        startTime = Date.now();
-    }
-
     function checkWinCondition() {
         if (isWinning || !activeTetrominoBody || !targetZone) return;
 
@@ -506,7 +610,8 @@
         
         let currentAngle = activeTetrominoBody.angle;
         let targetA = targetZone.angle;
-        const symmetry = TETROMINOS[targetZone.type].symmetry;
+        
+        const symmetry = POLYOMINO_SETS[targetZone.diff][targetZone.type].symmetry;
         
         let angleDiff = Math.abs(currentAngle - targetA);
         angleDiff = angleDiff % symmetry;
@@ -539,8 +644,7 @@
         activeTetrominoBody.render.opacity = 0.5;
 
         setTimeout(() => {
-            level++;
-            startNewLevel();
+            goToNextLevel();
         }, 2000); 
     }
 
